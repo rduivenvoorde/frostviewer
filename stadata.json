@@ -1,0 +1,34 @@
+{
+  "@iot.nextLink" : "https://zuidt.nl/FROST-Server/v1.0/Datastreams(1)/Observations?$top=10&$skip=11&$select=result,phenomenonTime&$orderby=phenomenonTime+desc",
+  "value" : [ {
+    "phenomenonTime" : "2019-08-21T15:44:12.337Z",
+    "result" : "26"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:43:12.334Z",
+    "result" : "31"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:42:12.333Z",
+    "result" : "19"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:41:12.333Z",
+    "result" : "20"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:40:12.332Z",
+    "result" : "25"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:39:12.348Z",
+    "result" : "25"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:38:12.329Z",
+    "result" : "18"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:37:12.329Z",
+    "result" : "25"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:36:12.329Z",
+    "result" : "27"
+  }, {
+    "phenomenonTime" : "2019-08-21T15:35:12.328Z",
+    "result" : "18"
+  } ]
+}
