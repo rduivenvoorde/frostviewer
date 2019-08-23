@@ -30,6 +30,9 @@ circle {
 
 </style>
 <body>
+<p>
+Data url = <a id="dataurl" href="">todo</a>
+</p>
 <p class="label">&nbsp;</p>
 
 <!-- from http://embed.plnkr.co/wJDcZmkEzXaLVhuLZmcQ/ -->
@@ -55,20 +58,25 @@ if (!datastream){
 }
 var count = getParameterByName('n');
 if (!count){
-  count = 50;
+  count = 100;
 }
 
-var dataurl = '/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+var dataurl = window.location.protocol+'//'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+document.getElementById('dataurl').setAttribute('href', dataurl);
+document.getElementById('dataurl').innerHTML = dataurl;
 
 var label = d3.select(".label");
+var label_format = (d3.time.format("%H:%M"));
 
 // Set the dimensions of the canvas / graph
 var margin = {top: 30, right: 20, bottom: 30, left: 50},
-  width = 600 - margin.left - margin.right,
+  //width = 600 - margin.left - margin.right,
+  width = window.innerWidth - margin.left - margin.right,
   height = 270 - margin.top - margin.bottom;
 
 // Parse the date / time
-var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%S.%LZ').parse;
+//var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%S.%LZ').parse;
+var parseDate = d3.time.format.utc('%Y-%m-%dT%H:%M:%S.%LZ').parse;
 
 // Set the ranges
 var x = d3.time.scale().range([0, width]);
@@ -76,7 +84,9 @@ var y = d3.scale.linear().range([height, 0]);
 
 // Define the axes
 var xAxis = d3.svg.axis().scale(x)
-  .tickFormat(d3.time.format("%H:%M"))
+//  .tickFormat(d3.time.format("%c"))
+  .tickFormat(d3.time.format("%d/%m %H:%M"))
+//  .tickFormat(d3.time.format("%H:%M"))
 //  .tickFormat(d3.time.format(" %d/%m %H:%M "))
 //  .orient("bottom").ticks(5);
 
@@ -128,9 +138,8 @@ d3.json(dataurl, function(error, data) {
       return y(d.close)
     })
     .on("mouseover", function(d,i) {
-
-   label.style("transform", "translate("+ x(d.date)+"px," + (y(d.close))+"px)")
-   label.text(d.close)
+   label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.close))+"px)")
+   label.text(label_format(d.date) + ' ' + d.close + ' cpm ')
 
 });
 
