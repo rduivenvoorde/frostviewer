@@ -1,162 +1,85 @@
 <!DOCTYPE html>
+<head>
 <meta charset="utf-8">
-<style> /* set the CSS */
+<!-- leaflet map -->
+<style>
+  #map{ width:100%;height:400px; }
 
-body { font: 10px Arial;}
-
-path { 
-  stroke: orange;
-  stroke-width: 1;
-  fill: none;
-}
-
-.axis path,
-.axis line {
-  fill: none;
-  stroke: grey;
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-
-
-.label {
-    position:absolute;
-}
-
-circle {
-    cursor: pointer;
-    fill: orange;
-}
-
+  iframe{
+    width:100%;
+    height: 300px;
+    border: white
+  }
 </style>
-<body>
-<p>
-Data url = <a id="dataurl" href="">todo</a>
-</p>
-<p class="label">&nbsp;</p>
 
-<!-- from http://embed.plnkr.co/wJDcZmkEzXaLVhuLZmcQ/ -->
-
-<!-- load the d3.js library --> 
-<script src="https://d3js.org/d3.v3.min.js"></script>
+<!-- https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.4.0/leaflet.js -->
+<link rel="stylesheet" href="css/leaflet.css"/>
+<script src="lib/leaflet.js"></script>
+<script src="lib/L.LabeledCircle.js"></script>
+<!-- https://code.jquery.com/jquery-3.3.1.min.js -->
+<script type="text/javascript" src="lib/jquery-3.3.1.min.js"></script>
 
 <script>
+$(function() {
+  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
 
-function getParameterByName(name, url) {
-    if (!url) url = window.location.href;
-    name = name.replace(/[\[\]]/g, '\\$&');
-    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-        results = regex.exec(url);
-    if (!results) return null;
-    if (!results[2]) return '';
-    return decodeURIComponent(results[2].replace(/\+/g, ' '));
-}
+  // initialize the map
+  var map = L.map('map').setView([52.1, 5.3], 8);
 
-var datastream = getParameterByName('d');
-if (!datastream){
-  datastream = 1;
-}
-var count = getParameterByName('n');
-if (!count){
-  count = 100;
-}
+  L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+          }).addTo(map);
 
-var dataurl = window.location.protocol+'//'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
-document.getElementById('dataurl').setAttribute('href', dataurl);
-document.getElementById('dataurl').innerHTML = dataurl;
+  // load GeoJSON from an external file
+  $.getJSON(featuresurl,function(data){
+    var options = {};
+    // https://leafletjs.com/reference-1.5.0.html#circlemarker
+    options.markerOptions = {
+                          radius: 11,
+                          //color: '#999999',
+                          color: '#3498db',
+                          fill: true,
+                          fillOpacity: 1,
+                          textStyle: {
+                            color: '#000',
+                            stroke: 'false',
+                            fill: true,
+                            _fontSize: '11',
+                            _fontFamily: 'Helvetica, Arial, sans-serif'
+                          },
+                          shiftY: 7
+                        };
+    options.anchorOptions = {
+      color: '#ff0000',
+      radius: 1
+    };
+    options.getLabelText = function(marker, feature) {
+      return feature.properties.value;
+    };
 
-var label = d3.select(".label");
-var label_format = (d3.time.format("%H:%M"));
-
-// Set the dimensions of the canvas / graph
-var margin = {top: 30, right: 20, bottom: 30, left: 50},
-  //width = 600 - margin.left - margin.right,
-  width = window.innerWidth - margin.left - margin.right,
-  height = 270 - margin.top - margin.bottom;
-
-// Parse the date / time
-//var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%S.%LZ').parse;
-var parseDate = d3.time.format.utc('%Y-%m-%dT%H:%M:%S.%LZ').parse;
-
-// Set the ranges
-var x = d3.time.scale().range([0, width]);
-var y = d3.scale.linear().range([height, 0]);
-
-// Define the axes
-var xAxis = d3.svg.axis().scale(x)
-//  .tickFormat(d3.time.format("%c"))
-  .tickFormat(d3.time.format("%d/%m %H:%M"))
-//  .tickFormat(d3.time.format("%H:%M"))
-//  .tickFormat(d3.time.format(" %d/%m %H:%M "))
-//  .orient("bottom").ticks(5);
-
-var yAxis = d3.svg.axis().scale(y)
-  .orient("left").ticks(5);
-
-// Define the line
-var valueline = d3.svg.line()
-  .x(function(d) { return x(d.date); })
-  .y(function(d) { return y(d.close); });
-
-// Adds the svg canvas
-var svg = d3.select("body")
-  .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-// Get the data
-//d3.json("stadata.json", function(error, data) {
-//d3.json("https://zuidt.nl/FROST-Server/v1.0/Datastreams(1)/Observations?$top=20&$select=result,phenomenonTime&$orderby=phenomenonTime+desc", function(error, data) {
-d3.json(dataurl, function(error, data) {
-  data.value.forEach(function(d) {
-    d.date = parseDate(d.phenomenonTime);
-    d.close = +d.result;
+    L.geoJson(data, {
+      /*
+      style: function (feature) {
+        return feature.properties && feature.properties.style;
+      },*/
+      onEachFeature: function(feature, layer){
+        layer.on('click', function(e){
+          console.log(feature.properties.datastream_id)
+          document.getElementById('dataframe').src = 'data.html?d='+feature.properties.datastream_id;
+        })
+      },
+      pointToLayer: function (feature, latlng) {
+        return new L.LabeledCircleMarker(latlng, feature, options);
+      }
+    }).addTo(map)
   });
-
-  // Scale the range of the data
-  x.domain(d3.extent(data.value, function(d) { return d.date; }));
-  y.domain([0, d3.max(data.value, function(d) { return d.close; })]);
-
-  // Add the valueline path.
-  svg.append("path")    // Add the valueline path.
-    .attr("class", "line")
-    .attr("d", valueline(data.value));
-
-  // Add the valueline dots.
-  svg   // Add the valueline dots.
-    .selectAll("circle")
-    .data(data.value)
-    .enter()
-    .append("circle")
-    .attr("r", 3)
-    .attr("cx", function(d) {
-      return x(d.date)
-    })
-    .attr("cy", function(d) {
-      return y(d.close)
-    })
-    .on("mouseover", function(d,i) {
-   label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.close))+"px)")
-   label.text(label_format(d.date) + ' ' + d.close + ' cpm ')
-
 });
-
-
-  // Add the X Axis
-  svg.append("g")     // Add the X Axis
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
-    .call(xAxis);
-
-  // Add the Y Axis
-  svg.append("g")     // Add the Y Axis
-    .attr("class", "y axis")
-    .call(yAxis);
-
-});
-
 </script>
+
+</head>
+
+<body>
+<div id="map"></div>
+<iframe id="dataframe" src="data.html"></iframe>
 </body>
 
