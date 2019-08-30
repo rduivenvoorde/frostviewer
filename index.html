@@ -17,6 +17,7 @@
 <!-- https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.4.0/leaflet.js -->
 <link rel="stylesheet" href="css/leaflet.css"/>
 <script src="lib/leaflet.js"></script>
+i<!-- https://github.com/w8r/leaflet-labeled-circle -->
 <script src="lib/L.LabeledCircle.js"></script>
 <!-- https://code.jquery.com/jquery-3.3.1.min.js -->
 <script type="text/javascript" src="lib/jquery-3.3.1.min.js"></script>
@@ -38,6 +39,7 @@ $(function() {
   $.getJSON(featuresurl,function(data){
     var options = {};
     // https://leafletjs.com/reference-1.5.0.html#circlemarker
+    
     options.markerOptions = {
                           radius: 11,
                           //color: '#999999',
