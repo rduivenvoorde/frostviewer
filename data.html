@@ -36,8 +36,8 @@ circle {
 
 <!-- from http://embed.plnkr.co/wJDcZmkEzXaLVhuLZmcQ/ -->
 
-<!-- load the d3.js library --> 
-<script src="https://d3js.org/d3.v3.min.js"></script>
+<!-- https://d3js.org/d3.v3.min.js --> 
+<script src="lib/d3.v3.min.js"></script>
 <script>
 
 function getParameterByName(name, url) {
@@ -59,7 +59,8 @@ if (!count){
   count = 100;
 }
 
-var dataurl = window.location.protocol+'//'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+// FROST-Server only on https
+var dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
 document.getElementById('dataurl').setAttribute('href', dataurl);
 document.getElementById('dataurl').innerHTML = dataurl;
 var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
