@@ -10,6 +10,10 @@ path{
   fill: none;
 }
 
+.avg {
+    stroke: lightblue;
+}
+
 .axis path,
 .axis line {
   fill: none;
@@ -60,10 +64,9 @@ if (!count){
 }
 
 // FROST-Server only on https
-var dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+var dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
 document.getElementById('dataurl').setAttribute('href', dataurl);
 document.getElementById('dataurl').innerHTML = dataurl;
-var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
 
 var label = d3.select(".label");
 var label_format = (d3.time.format("%H:%M"));
@@ -96,7 +99,7 @@ var yAxis = d3.svg.axis().scale(y)
 // Define the line
 var valueline = d3.svg.line()
   .x(function(d) { return x(d.date); })
-  .y(function(d) { return y(d.close); });
+  .y(function(d) { return y(d.cpm); });
 
 // Adds the svg canvas
 var svg = d3.select("body")
@@ -106,43 +109,48 @@ var svg = d3.select("body")
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+// ?? moving average over N points
+// https://stackoverflow.com/questions/11963352/plot-rolling-moving-average-in-d3-js
+var N = 10;
+var movingAvg = function(n) {
+    return function (points) {
+        points = points.map(function(each, index, array) {
+            var to = index + n - 1;
+            var subSeq, sum;
+            if (to < points.length) {
+                subSeq = array.slice(index, to + 1);
+                sum = subSeq.reduce(function(a,b) { 
+                    return [a[0] + b[0], a[1] + b[1]]; 
+                });
+                return sum.map(function(each) { return each / n; });
+            }
+            return undefined;
+        });
+        points = points.filter(function(each) { return typeof each !== 'undefined' })
+        // Note that one could re-interpolate the points 
+        // to form a basis curve (I think...)
+        return points.join("L");
+    }
+}
+var movingAverageLine = d3.svg.line()
+    .x(function(d,i) { return x(d.date); })
+    .y(function(d,i) { return y(d.cpm); })
+    .interpolate(movingAvg(N));
+
 // Get the data
 //d3.json("stadata.json", function(error, data) {
 //d3.json("https://zuidt.nl/FROST-Server/v1.0/Datastreams(1)/Observations?$top=20&$select=result,phenomenonTime&$orderby=phenomenonTime+desc", function(error, data) {
+
 d3.json(dataurl, function(error, data) {
+
   data.value.forEach(function(d) {
     d.date = parseDate(d.phenomenonTime);
-    d.close = +d.result;
+    d.cpm = +d.result;
   });
 
   // Scale the range of the data
   x.domain(d3.extent(data.value, function(d) { return d.date; }));
-  y.domain([0, d3.max(data.value, function(d) { return d.close; })]);
-
-  // Add the valueline path.
-  svg.append("path")    // Add the valueline path.
-    .attr("class", "line")
-    .attr("d", valueline(data.value));
-
-  // Add the valueline dots.
-  svg   // Add the valueline dots.
-    .selectAll("circle")
-    .data(data.value)
-    .enter()
-    .append("circle")
-    .attr("r", 3)
-    .attr("cx", function(d) {
-      return x(d.date)
-    })
-    .attr("cy", function(d) {
-      return y(d.close)
-    })
-    .on("mouseover", function(d,i) {
-   label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.close))+"px)")
-   label.text(label_format(d.date) + ' ' + d.close + ' cpm ')
-
-});
-
+  y.domain([0, d3.max(data.value, function(d) { return d.cpm; })]);
 
   // Add the X Axis
   svg.append("g")     // Add the X Axis
@@ -154,6 +162,34 @@ d3.json(dataurl, function(error, data) {
   svg.append("g")     // Add the Y Axis
     .attr("class", "y axis")
     .call(yAxis);
+
+  // moving average?
+  svg.append("path")
+    .attr("class", "avg")
+    .attr("d", movingAverageLine(data.value));
+
+  // Add the valueline path.
+  svg.append("path")    // Add the valueline path.
+    .attr("class", "line")
+    .attr("d", valueline(data.value));
+
+  // Add the valueline dots
+  svg
+    .selectAll("circle")
+    .data(data.value)
+    .enter()
+    .append("circle")
+    .attr("r", 3)
+    .attr("cx", function(d) {
+      return x(d.date)
+    })
+    .attr("cy", function(d) {
+      return y(d.cpm)
+    })
+    .on("mouseover", function(d,i) {
+   label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.cpm))+"px)")
+   label.text(label_format(d.date) + " " + d.cpm + " cpm") });
+
 
 });
 

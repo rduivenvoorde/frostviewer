@@ -7,24 +7,78 @@
 
   body { font: 11px Arial;}
 
+  .mappopup{
+    text-align: center;
+    vertical-align: middle;
+  }
+
   iframe{
     width:100%;
     height: 300px;
-    border: white
+    border: white;
   }
 </style>
 
 <!-- https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.4.0/leaflet.js -->
 <link rel="stylesheet" href="css/leaflet.css"/>
 <script src="lib/leaflet.js"></script>
-i<!-- https://github.com/w8r/leaflet-labeled-circle -->
+<!-- https://github.com/w8r/leaflet-labeled-circle -->
 <script src="lib/L.LabeledCircle.js"></script>
 <!-- https://code.jquery.com/jquery-3.3.1.min.js -->
 <script type="text/javascript" src="lib/jquery-3.3.1.min.js"></script>
 
 <script>
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, '\\$&');
+    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
+
 $(function() {
-  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
+
+  var datapageurl="data.html?";
+  var datastream = getParameterByName('d');
+  if (!datastream){
+    datastream = -1;
+  }
+  else{
+    datapageurl=datapageurl+'&d='+datastream;
+  }
+  var count = getParameterByName('n');
+  if (!count){
+    count = -1;
+  }
+  else{
+    datapageurl=datapageurl+'&n='+count;
+  }
+  document.getElementById('dataframe').src = datapageurl;
+
+  // Get's all FeaturesOfInterest...  (which can be A LOT if you have (moving) gps devices)
+  //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
+  // Better to get all Things (??or DataStreams) with their LATEST Observation) to start the map with
+  // NOTE the 'Things' after the proxy... this triggers the sta_proxy to parse Things instead of FeaturesOfInterest
+  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
+  //var featuresurl = "./samenmetenthings.json";
+
+  //Testing samenmeten...
+  //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$expand=Locations($select=name,location)&$top=20';
+  console.log(featuresurl);
+  if (datastream>0){
+    // Filter FOI's on Datastream id: $filter=observations/datastream/id eq 12&
+    featuresurl = featuresurl + '&$filter=observations/datastream/id%20eq%20'+datastream;
+    console.log(featuresurl);
+    // only top=x when looking at 1 Datastream
+    if (count>0){
+      // SORT on observation time AND top count
+      featuresurl = featuresurl + '&$orderby=observations/phenomenonTime %20desc&$top='+count;
+      console.log(featuresurl);
+    }
+  }
   document.getElementById('dataurl').setAttribute('href', featuresurl);
   document.getElementById('dataurl').innerHTML = featuresurl;
 
@@ -70,17 +124,24 @@ $(function() {
       },*/
       onEachFeature: function(feature, layer){
         layer.on('click', function(e){
-          document.getElementById('dataframe').src = 'data.html?d='+feature.properties.datastream_id;
+          var dataurl = 'data.html?d='+feature.properties.datastream_id;
+          if(count>0){
+            dataurl = dataurl + '&n=' + count;
+          }
+          document.getElementById('dataframe').src = dataurl;
         });
       },
       pointToLayer: function (feature, latlng) {
         var marker = new L.LabeledCircleMarker(latlng, feature, options);
         var d = new Date(feature.properties.time);
-        var popup = L.popup({ 'closeButton':false }).setContent('<div>'+d.toLocaleDateString('nl-NL', { 'dateStyle':'short'} )+'<br/>'
-          +d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/><b>'+feature.properties.value+' '+feature.properties.unit+'</b></div>');
+        console.log(feature)
+        var popup = L.popup({ 'closeButton':false }).setContent('<div class="mappopup">'+
+          'DataStream: '+feature.properties.datastream_id+'<br/>'+
+          feature.properties.name+'<br/>'+
+          d.toLocaleDateString('nl-NL', { 'dateStyle':'short'} )+'<br/>'+
+          d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/>'+
+          '<b>'+feature.properties.value+' '+feature.properties.unit+'</b></div>');
         marker.bindPopup(popup);
-        //marker.bindPopup('<div>'+d.toLocaleDateString('nl-NL', { 'dateStyle':'short'} )+'<br/>'
-        //  +d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/>'+feature.properties.value+' '+feature.properties.unit+'</div>');
         marker.on('mouseover', function (e) {
             this.openPopup();
         });
@@ -97,6 +158,9 @@ $(function() {
 </head>
 
 <body>
+<p>Use queryparams: <code>d=1</code> (d=datastream) to only show Datastream 1<br/>
+or <code>n=10</code> to only show last 10 counts<br/>
+Eg: only show 10 counts of datastream 11: <a href="https://zuidt.nl/frost/?d=11&n=10">https://zuidt.nl/frost/?d=11&n=10</a></p>
 <p> Data url = <a id="dataurl" href="">todo</a> </p>
 <div id="map"></div>
 <iframe id="dataframe" src="data.html"></iframe>
