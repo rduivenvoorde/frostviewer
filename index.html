@@ -64,6 +64,8 @@ $(function() {
   // NOTE the 'Things' after the proxy... this triggers the sta_proxy to parse Things instead of FeaturesOfInterest
   var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
 
+  var start_zoom = 8;
+  var zoom = start_zoom;
   //Testing samenmeten...
   //var featuresurl = "./samenmetenthings.json";
   //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$expand=Locations($select=name,location)&$top=20';
@@ -89,7 +91,7 @@ $(function() {
   document.getElementById('geojsonurl').innerHTML = ''+geojsonurl;
 
   // initialize the map
-  var map = L.map('map').setView([52.1, 5.3], 8);
+  var map = L.map('map').setView([52.1, 5.3], zoom);
 
   L.tileLayer(window.location.protocol+'//{s}.tile.osm.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
@@ -142,6 +144,7 @@ $(function() {
     };
 
 
+    var now = new Date();
     L.geoJson(data, {
       /*
       style: function (feature) {
@@ -157,8 +160,12 @@ $(function() {
         });
       },
       pointToLayer: function (feature, latlng) {
+        // IF d=datastreamid in querystring, zoom to that feature
+        if (datastream>0 && start_zoom == zoom){
+          var lonlat = feature.geometry.coordinates;
+          map.setView([lonlat[1],lonlat[0]], 12);
+        }
         var d = new Date(feature.properties.time);
-        var now = new Date();
         var days_old = (now.getTime()-d.getTime())/(1000 * 3600 * 24);
         //console.log(days_old);
         if (days_old > 1){
@@ -167,8 +174,9 @@ $(function() {
         else{
           var marker = new L.LabeledCircleMarker(latlng, feature, options);
         }
+        var did = feature.properties.datastream_id;
         var popup = L.popup({ 'closeButton':false }).setContent('<div class="mappopup">'+
-          'DataStream: '+feature.properties.datastream_id+'<br/>'+
+          '<a href="?d='+ did +'">DataStream: '+ did +'</a><br/>'+
           feature.properties.name+'<br/>'+
           d.toLocaleDateString('nl-NL', { 'dateStyle':'short'} )+'<br/>'+
           d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/>'+
