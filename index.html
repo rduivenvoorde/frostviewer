@@ -59,28 +59,34 @@ $(function() {
   document.getElementById('dataframe').src = datapageurl;
 
   // Get's all FeaturesOfInterest...  (which can be A LOT if you have (moving) gps devices)
-  //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
+//  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
   // Better to get all Things (??or DataStreams) with their LATEST Observation) to start the map with
   // NOTE the 'Things' after the proxy... this triggers the sta_proxy to parse Things instead of FeaturesOfInterest
   var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
-  //var featuresurl = "./samenmetenthings.json";
 
   //Testing samenmeten...
+  //var featuresurl = "./samenmetenthings.json";
   //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$expand=Locations($select=name,location)&$top=20';
-  console.log(featuresurl);
+  //console.log(featuresurl);
   if (datastream>0){
     // Filter FOI's on Datastream id: $filter=observations/datastream/id eq 12&
-    featuresurl = featuresurl + '&$filter=observations/datastream/id%20eq%20'+datastream;
-    console.log(featuresurl);
+//    featuresurl = featuresurl + '&$filter=observations/datastream/id%20eq%20'+datastream;
+    // Filter Things on Datastream id: $filter=observations/datastream/id eq 12&
+    featuresurl = featuresurl + '&$filter=datastream/id%20eq%20'+datastream;
+    //console.log(featuresurl);
     // only top=x when looking at 1 Datastream
     if (count>0){
       // SORT on observation time AND top count
-      featuresurl = featuresurl + '&$orderby=observations/phenomenonTime %20desc&$top='+count;
-      console.log(featuresurl);
+//      featuresurl = featuresurl + '&$orderby=observations/phenomenonTime %20desc&$top='+count;
+      featuresurl = featuresurl.replace('$top=1', '$top='+count);
+      //console.log(featuresurl);
     }
   }
   document.getElementById('dataurl').setAttribute('href', featuresurl);
-  document.getElementById('dataurl').innerHTML = featuresurl;
+  document.getElementById('dataurl').innerHTML = ''+featuresurl;
+  var geojsonurl = featuresurl.replace(/http.*\?/, 'https://zuidt.nl/FROST-Server/v1.0/Things?');
+  document.getElementById('geojsonurl').setAttribute('href', geojsonurl);
+  document.getElementById('geojsonurl').innerHTML = ''+geojsonurl;
 
   // initialize the map
   var map = L.map('map').setView([52.1, 5.3], 8);
@@ -92,30 +98,49 @@ $(function() {
   // load GeoJSON from an external file
   $.getJSON(featuresurl,function(data){
     var options = {};
+    var opts;
     // https://leafletjs.com/reference-1.5.0.html#circlemarker
-    
+    // https://github.com/w8r/leaflet-labeled-circle
     options.markerOptions = {
-                          radius: 11,
-                          //color: '#999999',
+                          radius: 12,
+                          //draggable: false,
+                          stroke: false,
                           color: '#3498db',
                           fill: true,
                           fillOpacity: 1,
                           textStyle: {
                             color: '#000',
-                            stroke: 'false',
-                            fill: true,
+                            _stroke: 'false',
+                            _fill: true,
                             _fontSize: '11',
                             _fontFamily: 'Helvetica, Arial, sans-serif'
                           },
                           shiftY: 7
                         };
     options.anchorOptions = {
-      color: '#ff0000',
-      radius: 1
+      //color: '#ff0000',
+      color: '#3498db00',
+      radius: 10
+    };
+    options.lineOptions = {
+      //color: '#f00',
+      color: '#3498db00',
+      dashArray: [0, 6],
+      lineCap: 'square',
+      weight: 0
     };
     options.getLabelText = function(marker, feature) {
       return feature.properties.value;
     };
+
+    // for OLD observations
+    opts = JSON.parse(JSON.stringify(options));
+    opts.markerOptions.fillOpacity=0.3;
+    opts.markerOptions.textStyle.color='#777777';
+    opts.getLabelText = function(marker, feature) {
+      return feature.properties.value;
+    };
+
 
     L.geoJson(data, {
       /*
@@ -132,9 +157,16 @@ $(function() {
         });
       },
       pointToLayer: function (feature, latlng) {
-        var marker = new L.LabeledCircleMarker(latlng, feature, options);
         var d = new Date(feature.properties.time);
-        console.log(feature)
+        var now = new Date();
+        var days_old = (now.getTime()-d.getTime())/(1000 * 3600 * 24);
+        //console.log(days_old);
+        if (days_old > 1){
+          var marker = new L.LabeledCircleMarker(latlng, feature, opts);
+        }
+        else{
+          var marker = new L.LabeledCircleMarker(latlng, feature, options);
+        }
         var popup = L.popup({ 'closeButton':false }).setContent('<div class="mappopup">'+
           'DataStream: '+feature.properties.datastream_id+'<br/>'+
           feature.properties.name+'<br/>'+
@@ -142,11 +174,15 @@ $(function() {
           d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/>'+
           '<b>'+feature.properties.value+' '+feature.properties.unit+'</b></div>');
         marker.bindPopup(popup);
+        /*
         marker.on('mouseover', function (e) {
             this.openPopup();
         });
         marker.on('mouseout', function (e) {
             this.closePopup();
+        });*/
+        marker.on('click', function (e) {
+            this.openPopup();
         });
         return marker;
       }
@@ -158,10 +194,13 @@ $(function() {
 </head>
 
 <body>
+<div>
 <p>Use queryparams: <code>d=1</code> (d=datastream) to only show Datastream 1<br/>
 or <code>n=10</code> to only show last 10 counts<br/>
-Eg: only show 10 counts of datastream 11: <a href="https://zuidt.nl/frost/?d=11&n=10">https://zuidt.nl/frost/?d=11&n=10</a></p>
-<p> Data url = <a id="dataurl" href="">todo</a> </p>
+Eg: only show 10 counts of datastream 14: <a href="https://zuidt.nl/frost/?d=14&n=10">https://zuidt.nl/frost/?d=14&n=10</a></p>
+<p>Geojson  url = <a id="geojsonurl" href="">todo</a> </p>
+<p>Data url = <a id="dataurl" href="">todo</a> </p>
+</div>
 <div id="map"></div>
 <iframe id="dataframe" src="data.html"></iframe>
 </body>

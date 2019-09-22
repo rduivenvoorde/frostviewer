@@ -32,11 +32,19 @@ circle {
     fill: orange;
 }
 </style>
+<!-- https://code.jquery.com/jquery-3.3.1.min.js -->
+<script type="text/javascript" src="lib/jquery-3.3.1.min.js"></script>
 
 <body>
 
 <p> Data url = <a id="dataurl" href="">todo</a> </p>
+<p><a href="" class="showgraph">Open THIS Graph In Separate Windows</a> OR <a href="" class="showdata">Show DATA In Separate Windows</a></p>
 <p class="label">&nbsp;</p>
+
+<script  type="text/javascript">
+     $("a.showgraph").on("click",function(){ window.open(window.location, '_blank'); });
+     $("a.showdata").on("click",function(){ window.open(dataurl, '_blank'); });
+</script>
 
 <!-- from http://embed.plnkr.co/wJDcZmkEzXaLVhuLZmcQ/ -->
 
