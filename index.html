@@ -33,9 +33,29 @@ function getParameterByName(name, url) {
     name = name.replace(/[\[\]]/g, '\\$&');
     var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
         results = regex.exec(url);
+    //console.log(results);
     if (!results) return null;
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+function setParameter(name, value){
+  if (getParameterByName(name)==null){
+    var sep = '&';
+    if (window.location.search == ''){
+      sep = '';
+      if (window.location.href.indexOf('?')<0){
+        sep = '?';
+      }
+    }
+    return window.location.href+sep+name+'='+value;
+  }
+  else{
+    // already in query params... change it
+    var q = window.location.href;
+    var curval = getParameterByName(name);
+    regExp = new RegExp(name+'='+curval);
+    return q.replace(regExp, name+'='+value);
+  }
 }
 
 
@@ -176,7 +196,7 @@ $(function() {
         }
         var did = feature.properties.datastream_id;
         var popup = L.popup({ 'closeButton':false }).setContent('<div class="mappopup">'+
-          '<a href="?d='+ did +'">DataStream: '+ did +'</a><br/>'+
+          '<a href=\'javascript:window.location.href=setParameter("d",'+did+');\'>DataStream: '+ did +'</a><br/>'+
           feature.properties.name+'<br/>'+
           d.toLocaleDateString('nl-NL', { 'dateStyle':'short'} )+'<br/>'+
           d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/>'+
@@ -203,9 +223,15 @@ $(function() {
 
 <body>
 <div>
-<p>Use queryparams: <code>d=1</code> (d=datastream) to only show Datastream 1<br/>
-or <code>n=10</code> to only show last 10 counts<br/>
+<p>Use queryparams: <code>d=1</code> (d=datastream) to only show Datastream 1, or <code>n=10</code> to only show last 10 counts<br/>
 Eg: only show 10 counts of datastream 14: <a href="https://zuidt.nl/frost/?d=14&n=10">https://zuidt.nl/frost/?d=14&n=10</a></p>
+<p>Show:
+<a href='javascript:window.location.href=setParameter("n",5);'>Top 5</a>
+<a href='javascript:window.location.href=setParameter("n",10);'>Top 10</a>
+<a href='javascript:window.location.href=setParameter("n",50);'>Top 50</a>
+<a href='javascript:window.location.href=setParameter("n",100);'>Top 100</a>
+<a href='javascript:window.location.href=setParameter("n",200);'>Top 200</a>
+-- Show <a href="?">ALL Datastreams</a></p>
 <p>Geojson  url = <a id="geojsonurl" href="">todo</a> </p>
 <p>Data url = <a id="dataurl" href="">todo</a> </p>
 </div>
