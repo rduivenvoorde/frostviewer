@@ -10,8 +10,12 @@ path{
   fill: none;
 }
 
-.avg {
+.mavg {
     stroke: lightblue;
+}
+.avg {
+    stroke: red;
+    stroke-width: .5;
 }
 
 .axis path,
@@ -76,6 +80,7 @@ var dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastream
 document.getElementById('dataurl').setAttribute('href', dataurl);
 document.getElementById('dataurl').innerHTML = dataurl;
 
+
 var label = d3.select(".label");
 var label_format = (d3.time.format("%H:%M"));
 
@@ -89,7 +94,7 @@ var margin = {top: 30, right: 30, bottom: 30, left: 50},
 //var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%S.%LZ').parse;
 var parseDate = d3.time.format.utc('%Y-%m-%dT%H:%M:%S.%LZ').parse;
 
-// Set the ranges
+// Set the ranges (-functions)
 var x = d3.time.scale().range([0, width]);
 var y = d3.scale.linear().range([height, 0]);
 
@@ -119,7 +124,7 @@ var svg = d3.select("body")
 
 // ?? moving average over N points
 // https://stackoverflow.com/questions/11963352/plot-rolling-moving-average-in-d3-js
-var N = 10;
+var N = 6;
 var movingAvg = function(n) {
     return function (points) {
         points = points.map(function(each, index, array) {
@@ -144,6 +149,25 @@ var movingAverageLine = d3.svg.line()
     .x(function(d,i) { return x(d.date); })
     .y(function(d,i) { return y(d.cpm); })
     .interpolate(movingAvg(N));
+
+var avgx = function() {
+    return function (points) {
+        var n = points.length;
+        points = points.map(function(each, index, array) {
+              sum = array.reduce(function(a,b) { 
+                  return [array[index][0], a[1] + b[1]]; 
+              });
+              return [sum[0],sum[1]/n]
+        });
+        return points.join("L");
+    }
+}
+// line generator...
+var averageLine = d3.svg.line()
+    .x(function(d,i) { return x(d.date); })
+    .y(function(d,i) { return y(d.cpm); })
+    .interpolate(avgx());
+
 
 // Get the data
 //d3.json("stadata.json", function(error, data) {
@@ -171,10 +195,15 @@ d3.json(dataurl, function(error, data) {
     .attr("class", "y axis")
     .call(yAxis);
 
-  // moving average?
+  // moving average
+  // <path class="line" d="M1651,88.21428571428572L816.7857822859887,0L0,13.571428571428566"></path>
+  svg.append("path")
+    .attr("class", "mavg")
+    .attr("d", movingAverageLine(data.value));
+  // average
   svg.append("path")
     .attr("class", "avg")
-    .attr("d", movingAverageLine(data.value));
+    .attr("d", averageLine(data.value));
 
   // Add the valueline path.
   svg.append("path")    // Add the valueline path.

@@ -14,7 +14,7 @@
 
   iframe{
     width:100%;
-    height: 300px;
+    height: 320px;
     border: white;
   }
 </style>
@@ -104,11 +104,11 @@ $(function() {
       //console.log(featuresurl);
     }
   }
-  document.getElementById('dataurl').setAttribute('href', featuresurl);
-  document.getElementById('dataurl').innerHTML = ''+featuresurl;
-  var geojsonurl = featuresurl.replace(/http.*\?/, 'https://zuidt.nl/FROST-Server/v1.0/Things?');
-  document.getElementById('geojsonurl').setAttribute('href', geojsonurl);
-  document.getElementById('geojsonurl').innerHTML = ''+geojsonurl;
+  document.getElementById('geojsonurl').setAttribute('href', featuresurl);
+  document.getElementById('geojsonurl').innerHTML = ''+featuresurl;
+  var dataurl = featuresurl.replace(/http.*\?/, 'https://zuidt.nl/FROST-Server/v1.0/Things?');
+  document.getElementById('dataurl').setAttribute('href', dataurl);
+  document.getElementById('dataurl').innerHTML = ''+dataurl;
 
   // initialize the map
   var map = L.map('map').setView([52.1, 5.3], zoom);
