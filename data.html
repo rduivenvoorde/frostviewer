@@ -75,52 +75,7 @@ if (!count){
   count = 100;
 }
 
-// FROST-Server only on https
-var dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
-document.getElementById('dataurl').setAttribute('href', dataurl);
-document.getElementById('dataurl').innerHTML = dataurl;
 
-
-var label = d3.select(".label");
-var label_format = (d3.time.format("%H:%M"));
-
-// Set the dimensions of the canvas / graph
-var margin = {top: 30, right: 30, bottom: 30, left: 50},
-  //width = 600 - margin.left - margin.right,
-  width = window.innerWidth - margin.left - margin.right - 50,
-  height = 270 - margin.top - margin.bottom - 20;
-
-// Parse the date / time
-//var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%S.%LZ').parse;
-var parseDate = d3.time.format.utc('%Y-%m-%dT%H:%M:%S.%LZ').parse;
-
-// Set the ranges (-functions)
-var x = d3.time.scale().range([0, width]);
-var y = d3.scale.linear().range([height, 0]);
-
-// Define the axes
-var xAxis = d3.svg.axis().scale(x)
-//  .tickFormat(d3.time.format("%c"))
-  .tickFormat(d3.time.format("%d/%m %H:%M"))
-//  .tickFormat(d3.time.format("%H:%M"))
-//  .tickFormat(d3.time.format(" %d/%m %H:%M "))
-//  .orient("bottom").ticks(5);
-
-var yAxis = d3.svg.axis().scale(y)
-  .orient("left").ticks(5);
-
-// Define the line
-var valueline = d3.svg.line()
-  .x(function(d) { return x(d.date); })
-  .y(function(d) { return y(d.cpm); });
-
-// Adds the svg canvas
-var svg = d3.select("body")
-  .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 // ?? moving average over N points
 // https://stackoverflow.com/questions/11963352/plot-rolling-moving-average-in-d3-js
@@ -169,67 +124,148 @@ var averageLine = d3.svg.line()
     .interpolate(avgx());
 
 
-// Get the data
-//d3.json("stadata.json", function(error, data) {
-//d3.json("https://zuidt.nl/FROST-Server/v1.0/Datastreams(1)/Observations?$top=20&$select=result,phenomenonTime&$orderby=phenomenonTime+desc", function(error, data) {
+// FROST-Server only on https
+var dataurl = '';
+var datastreams=[]
+var graph_height = 270;
+// only show when 1 datastream
+if (datastream.split(',').length==1){
+  dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+  document.getElementById('dataurl').setAttribute('href', dataurl);
+  document.getElementById('dataurl').innerHTML = dataurl;
+  datastreams.push(datastream);
+}
+else{
+  datastreams = datastream.split(',');
+  graph_height = 800;
+}
 
-d3.json(dataurl, function(error, data) {
+var label = d3.select(".label");
+var label_format = (d3.time.format("%H:%M"));
 
-  data.value.forEach(function(d) {
-    d.date = parseDate(d.phenomenonTime);
-    d.cpm = +d.result;
+// Set the dimensions of the canvas / graph
+var margin = {top: 30, right: 30, bottom: 30, left: 50},
+  //width = 600 - margin.left - margin.right,
+  width = window.innerWidth - margin.left - margin.right - 50,
+  height = graph_height - margin.top - margin.bottom - 20;
+
+// Parse the date / time
+//var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%S.%LZ').parse;
+var parseDate = d3.time.format.utc('%Y-%m-%dT%H:%M:%S.%LZ').parse;
+
+// Set the ranges (-functions)
+var x = d3.time.scale().range([0, width]);
+var y = d3.scale.linear().range([height, 0]);
+
+// Define the axes
+var xAxis = d3.svg.axis().scale(x)
+//  .tickFormat(d3.time.format("%c"))
+  .tickFormat(d3.time.format("%d/%m %H:%M"))
+//  .tickFormat(d3.time.format("%H:%M"))
+//  .tickFormat(d3.time.format(" %d/%m %H:%M "))
+//  .orient("bottom").ticks(5);
+
+var yAxis = d3.svg.axis().scale(y)
+  .orient("left").ticks(5);
+
+// Define the line
+var valueline = d3.svg.line()
+  .x(function(d) { return x(d.date); })
+  .y(function(d) { return y(d.cpm); });
+
+// Adds the svg canvas
+var svg = d3.select("body")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var multienddate =  new Date(); // '2019-09-29T12:00:00.000Z';
+var multistartdate =  new Date(multienddate)  // '2019-09-29T09:00:00.000Z';
+multistartdate.setHours(multistartdate.getHours() - 4);  // hours
+//multistartdate.setDate(multistartdate.getDate() - 3);  // days
+
+for (var i=0;i<datastreams.length;i++){
+
+  // Get the data
+  if (datastreams.length>1){
+    // multidatastream? Filter on x hours ago instead of top=n
+    //console.log(multistartdate);
+    //console.log(multienddate);
+    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastreams[i]+')/Observations?$count=true&$select=result,phenomenonTime&$orderby=phenomenonTime+desc&$top=1000&$filter=phenomenonTime gt '+multistartdate.toISOString();
+  }
+  else{
+    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastreams[i]+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+  }
+
+  console.log(datastreams[i]);
+  d3.json(dataurl, function(error, data) {
+
+    data.value.forEach(function(d) {
+      d.date = parseDate(d.phenomenonTime);
+      d.cpm = +d.result;
+    });
+
+
+    console.log(data['@iot.count'], d3.extent(data.value, function(d) { return d.date; }));
+
+    // Scale the range of the data
+    if (datastreams.length>1){
+      // multi stream? Fixed value...
+      x.domain([multistartdate, multienddate]);
+      y.domain([0, 40]);
+    }
+    else{
+      x.domain(d3.extent(data.value, function(d) { return d.date; }));
+      y.domain([0, d3.max(data.value, function(d) { return d.cpm; })]);
+    }
+
+    // Add the X Axis
+    svg.append("g")     // Add the X Axis
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+    // Add the Y Axis
+    svg.append("g")     // Add the Y Axis
+      .attr("class", "y axis")
+      .call(yAxis);
+
+    // moving average
+    // <path class="line" d="M1651,88.21428571428572L816.7857822859887,0L0,13.571428571428566"></path>
+    svg.append("path")
+      .attr("class", "mavg")
+      .attr("d", movingAverageLine(data.value));
+    // average
+    svg.append("path")
+      .attr("class", "avg")
+      .attr("d", averageLine(data.value));
+
+    // Add the valueline path.
+    svg.append("path")    // Add the valueline path.
+      .attr("class", "line")
+      .attr("d", valueline(data.value));
+
+    // Add the valueline dots
+    svg
+      .selectAll("circle")
+      .data(data.value)
+      .enter()
+      .append("circle")
+      .attr("r", 3)
+      .attr("cx", function(d) {
+        return x(d.date)
+      })
+      .attr("cy", function(d) {
+        return y(d.cpm)
+      })
+      .on("mouseover", function(d,i) {
+        label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.cpm))+"px)")
+        label.text(label_format(d.date) + " " + d.cpm + " cpm") 
+      });
   });
-
-  // Scale the range of the data
-  x.domain(d3.extent(data.value, function(d) { return d.date; }));
-  y.domain([0, d3.max(data.value, function(d) { return d.cpm; })]);
-
-  // Add the X Axis
-  svg.append("g")     // Add the X Axis
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
-    .call(xAxis);
-
-  // Add the Y Axis
-  svg.append("g")     // Add the Y Axis
-    .attr("class", "y axis")
-    .call(yAxis);
-
-  // moving average
-  // <path class="line" d="M1651,88.21428571428572L816.7857822859887,0L0,13.571428571428566"></path>
-  svg.append("path")
-    .attr("class", "mavg")
-    .attr("d", movingAverageLine(data.value));
-  // average
-  svg.append("path")
-    .attr("class", "avg")
-    .attr("d", averageLine(data.value));
-
-  // Add the valueline path.
-  svg.append("path")    // Add the valueline path.
-    .attr("class", "line")
-    .attr("d", valueline(data.value));
-
-  // Add the valueline dots
-  svg
-    .selectAll("circle")
-    .data(data.value)
-    .enter()
-    .append("circle")
-    .attr("r", 3)
-    .attr("cx", function(d) {
-      return x(d.date)
-    })
-    .attr("cy", function(d) {
-      return y(d.cpm)
-    })
-    .on("mouseover", function(d,i) {
-   label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.cpm))+"px)")
-   label.text(label_format(d.date) + " " + d.cpm + " cpm") });
-
-
-});
-
+}
 </script>
 </body>
 
