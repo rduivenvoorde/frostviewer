@@ -83,7 +83,7 @@ $(function() {
   // Better to get all Things (??or DataStreams) with their LATEST Observation) to start the map with
   // NOTE the 'Things' after the proxy... this triggers the sta_proxy to parse Things instead of FeaturesOfInterest
   var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
-
+  //featuresurl = 'https://zuidt.nl/frost/36points.json';
   var start_zoom = 8;
   var zoom = start_zoom;
   //Testing samenmeten...
@@ -187,8 +187,8 @@ $(function() {
         }
         var d = new Date(feature.properties.time);
         var days_old = (now.getTime()-d.getTime())/(1000 * 3600 * 24);
-        //console.log(days_old);
-        if (days_old > 1){
+        console.log(days_old, ' > ', 1/24, days_old>1/24);
+        if (days_old > 1/24){
           var marker = new L.LabeledCircleMarker(latlng, feature, opts);
         }
         else{
@@ -196,8 +196,8 @@ $(function() {
         }
         var did = feature.properties.datastream_id;
         var popup = L.popup({ 'closeButton':false }).setContent('<div class="mappopup">'+
-          '<a href=\'javascript:window.location.href=setParameter("d",'+did+');\'>DataStream: '+ did +'</a><br/>'+
           feature.properties.name+'<br/>'+
+          '<a href=\'javascript:window.location.href=setParameter("d",'+did+');\'>DataStream: '+ did +'</a><br/>'+
           d.toLocaleDateString('nl-NL', { 'dateStyle':'short'} )+'<br/>'+
           d.toLocaleTimeString('nl-NL', { 'timeStyle':'short'} )+'<br/>'+
           '<b>'+feature.properties.value+' '+feature.properties.unit+'</b></div>');

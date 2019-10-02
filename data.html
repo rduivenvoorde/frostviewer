@@ -15,7 +15,8 @@ path{
 }
 .avg {
     stroke: red;
-    stroke-width: .5;
+    fill: red;
+    stroke-width: 1.5;
 }
 
 .axis path,
@@ -129,7 +130,7 @@ var dataurl = '';
 var datastreams=[]
 var graph_height = 270;
 // only show when 1 datastream
-if (datastream.split(',').length==1){
+if (datastream.toString().split(',').length==1){
   dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
   document.getElementById('dataurl').setAttribute('href', dataurl);
   document.getElementById('dataurl').innerHTML = dataurl;
@@ -187,19 +188,21 @@ multistartdate.setHours(multistartdate.getHours() - 4);  // hours
 //multistartdate.setDate(multistartdate.getDate() - 3);  // days
 
 for (var i=0;i<datastreams.length;i++){
+  doit(datastreams[i]);
+}
 
+function doit(datastream_id){
   // Get the data
   if (datastreams.length>1){
     // multidatastream? Filter on x hours ago instead of top=n
     //console.log(multistartdate);
     //console.log(multienddate);
-    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastreams[i]+')/Observations?$count=true&$select=result,phenomenonTime&$orderby=phenomenonTime+desc&$top=1000&$filter=phenomenonTime gt '+multistartdate.toISOString();
+    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream_id+')/Observations?$count=true&$select=result,phenomenonTime&$orderby=phenomenonTime+desc&$top=1000&$filter=phenomenonTime gt '+multistartdate.toISOString();
   }
   else{
-    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastreams[i]+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream_id+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
   }
 
-  console.log(datastreams[i]);
   d3.json(dataurl, function(error, data) {
 
     data.value.forEach(function(d) {
@@ -207,17 +210,20 @@ for (var i=0;i<datastreams.length;i++){
       d.cpm = +d.result;
     });
 
-
-    console.log(data['@iot.count'], d3.extent(data.value, function(d) { return d.date; }));
+    console.log(datastream_id, data['@iot.count'], d3.extent(data.value, function(d) { return d.date; }));
 
     // Scale the range of the data
     if (datastreams.length>1){
       // multi stream? Fixed value...
       x.domain([multistartdate, multienddate]);
-      y.domain([0, 40]);
+      y.domain([10, 35]);
     }
     else{
-      x.domain(d3.extent(data.value, function(d) { return d.date; }));
+      // actual extent from data
+      //x.domain(d3.extent(data.value, function(d) { return d.date; }));
+      // taking NOW as end for extent
+      extent = d3.extent(data.value, function(d) { return d.date; });
+      x.domain([extent[0], multienddate]);
       y.domain([0, d3.max(data.value, function(d) { return d.cpm; })]);
     }
 
@@ -239,31 +245,43 @@ for (var i=0;i<datastreams.length;i++){
       .attr("d", movingAverageLine(data.value));
     // average
     svg.append("path")
+      .attr("id", 'avg_datastream_'+datastream_id)
+      .attr("datastream", datastream_id)
       .attr("class", "avg")
-      .attr("d", averageLine(data.value));
-
-    // Add the valueline path.
-    svg.append("path")    // Add the valueline path.
-      .attr("class", "line")
-      .attr("d", valueline(data.value));
-
-    // Add the valueline dots
-    svg
-      .selectAll("circle")
-      .data(data.value)
-      .enter()
-      .append("circle")
-      .attr("r", 3)
-      .attr("cx", function(d) {
-        return x(d.date)
-      })
-      .attr("cy", function(d) {
-        return y(d.cpm)
-      })
+      .attr("d", averageLine(data.value))
       .on("mouseover", function(d,i) {
-        label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.cpm))+"px)")
-        label.text(label_format(d.date) + " " + d.cpm + " cpm") 
+        var m = d3.mouse(this);  // mouseposition
+        console.log(this.id, m, datastream_id, data, d3.mean(data.value));
+        label.style("transform", "translate("+ m[0]+"px," + m[1]+"px)")
+        label.text("Datastream "+datastream_id);
       });
+
+    if (datastreams.length==1){
+
+      // Add the valueline path.
+      svg.append("path")    // Add the valueline path.
+        .attr("class", "line")
+        .attr("d", valueline(data.value));
+
+      // Add the valueline dots
+      svg
+        .selectAll("circle")
+        .data(data.value)
+        .enter()
+        .append("circle")
+        .attr("r", 3)
+        .attr("cx", function(d) {
+          return x(d.date)
+        })
+        .attr("cy", function(d) {
+          return y(d.cpm)
+        })
+        .on("mouseover", function(d,i) {
+          label.style("transform", "translate("+ (22+x(d.date))+"px," + (5+y(d.cpm))+"px)")
+          label.text(label_format(d.date) + " " + d.cpm + " cpm") 
+        });
+    }
+
   });
 }
 </script>
