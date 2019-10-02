@@ -28,6 +28,8 @@
 <script type="text/javascript" src="lib/jquery-3.3.1.min.js"></script>
 
 <script>
+
+// Get a Query parameter from current URL
 function getParameterByName(name, url) {
     if (!url) url = window.location.href;
     name = name.replace(/[\[\]]/g, '\\$&');
@@ -38,6 +40,7 @@ function getParameterByName(name, url) {
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
 }
+// SET a Query parameter in current url (returning changed url)
 function setParameter(name, value){
   if (getParameterByName(name)==null){
     var sep = '&';
@@ -58,7 +61,63 @@ function setParameter(name, value){
   }
 }
 
+// Create the Leaflet Marker options
+// https://leafletjs.com/reference-1.5.0.html#circlemarker
+// https://github.com/w8r/leaflet-labeled-circle
+function createMarkerOptions(){
+  var options = {};
+  options.markerOptions = {
+                        radius: 12,
+                        //draggable: false,
+                        stroke: false,
+                        color: '#3498db',
+                        fill: true,
+                        fillOpacity: 1,
+                        textStyle: {
+                          color: '#000',
+                          _stroke: 'false',
+                          _fill: true,
+                          _fontSize: '11',
+                          _fontFamily: 'Helvetica, Arial, sans-serif'
+                        },
+                        shiftY: 7
+                      };
+  options.anchorOptions = {
+    //color: '#ff0000',
+    color: '#3498db00',
+    radius: 10
+  };
+  options.lineOptions = {
+    //color: '#f00',
+    color: '#3498db00',
+    dashArray: [0, 6],
+    lineCap: 'square',
+    weight: 0
+  };
+  options.getLabelText = function(marker, feature) {
+    return feature.properties.value;
+  };
+  return options;
+}
 
+
+// create alternative (style) option to visually distinguish 
+//  'stale' Datastreams, that is: have non recnet last Observation
+// do this by 'overriding' some props in the normal options
+function createStaleMarkerOptions(options){
+  var opts;
+  opts = JSON.parse(JSON.stringify(options));
+  opts.markerOptions.fillOpacity=0.3;
+  opts.markerOptions.textStyle.color='#777777';
+  // stringify trick does not work with functions, so again:
+  opts.getLabelText = function(marker, feature) {
+    return feature.properties.value;
+  };
+  return opts;
+}
+
+
+// ON PAGE LOAD:
 $(function() {
 
   var datapageurl="data.html?";
@@ -83,7 +142,7 @@ $(function() {
   // Better to get all Things (??or DataStreams) with their LATEST Observation) to start the map with
   // NOTE the 'Things' after the proxy... this triggers the sta_proxy to parse Things instead of FeaturesOfInterest
   var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
-  //featuresurl = 'https://zuidt.nl/frost/36points.json';
+  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/FROST-Server/v1.0/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
   var start_zoom = 8;
   var zoom = start_zoom;
   //Testing samenmeten...
@@ -110,66 +169,53 @@ $(function() {
   document.getElementById('dataurl').setAttribute('href', dataurl);
   document.getElementById('dataurl').innerHTML = ''+dataurl;
 
-  // initialize the map
+  // Initialize the map
   var map = L.map('map').setView([52.1, 5.3], zoom);
-
+  // Add OpenStreetMap layer to the map
   L.tileLayer(window.location.protocol+'//{s}.tile.osm.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-          }).addTo(map);
+  }).addTo(map);
 
-  // load GeoJSON from an external file
+  function things2geojson(data){
+    var jsonFeatures = [];
+    data.value.forEach(function(thing){
+      console.log(thing);
+      // only for Things which have a Location[0].location
+      if (thing.Locations && thing.Locations[0] && thing.Locations[0].location){
+        var feature = {type: 'Feature',
+          properties: {
+            name: thing.name,
+            datastream: thing.Datastreams[0].name,
+            datastream_id: thing.Datastreams[0]['@iot.id'],
+            value: thing.Datastreams[0].Observations[0].result,
+            time: thing.Datastreams[0].Observations[0].phenomenonTime,
+            unit: thing.Datastreams[0].unitOfMeasurement.name
+          },
+          geometry: thing.Locations[0].location
+        };
+        console.log(feature);
+        jsonFeatures.push(feature);
+      }
+    });
+    var geojson = { type:'FeatureCollection', features: jsonFeatures };
+    return geojson;
+  }
+
+
+  // get JSON from url
   $.getJSON(featuresurl,function(data){
-    var options = {};
-    var opts;
-    // https://leafletjs.com/reference-1.5.0.html#circlemarker
-    // https://github.com/w8r/leaflet-labeled-circle
-    options.markerOptions = {
-                          radius: 12,
-                          //draggable: false,
-                          stroke: false,
-                          color: '#3498db',
-                          fill: true,
-                          fillOpacity: 1,
-                          textStyle: {
-                            color: '#000',
-                            _stroke: 'false',
-                            _fill: true,
-                            _fontSize: '11',
-                            _fontFamily: 'Helvetica, Arial, sans-serif'
-                          },
-                          shiftY: 7
-                        };
-    options.anchorOptions = {
-      //color: '#ff0000',
-      color: '#3498db00',
-      radius: 10
-    };
-    options.lineOptions = {
-      //color: '#f00',
-      color: '#3498db00',
-      dashArray: [0, 6],
-      lineCap: 'square',
-      weight: 0
-    };
-    options.getLabelText = function(marker, feature) {
-      return feature.properties.value;
-    };
 
-    // for OLD observations
-    opts = JSON.parse(JSON.stringify(options));
-    opts.markerOptions.fillOpacity=0.3;
-    opts.markerOptions.textStyle.color='#777777';
-    opts.getLabelText = function(marker, feature) {
-      return feature.properties.value;
-    };
+    // if featuresurl retrieves STA-Things instead of geojson
+    data = things2geojson(data)
+
+    // options for Markers
+    var marker_style = createMarkerOptions();
+    var stale_marker_style = createStaleMarkerOptions(marker_style);
+
 
 
     var now = new Date();
-    L.geoJson(data, {
-      /*
-      style: function (feature) {
-        return feature.properties && feature.properties.style;
-      },*/
+    L.geoJSON(data, {
       onEachFeature: function(feature, layer){
         layer.on('click', function(e){
           var dataurl = 'data.html?d='+feature.properties.datastream_id;
@@ -187,12 +233,11 @@ $(function() {
         }
         var d = new Date(feature.properties.time);
         var days_old = (now.getTime()-d.getTime())/(1000 * 3600 * 24);
-        console.log(days_old, ' > ', 1/24, days_old>1/24);
         if (days_old > 1/24){
-          var marker = new L.LabeledCircleMarker(latlng, feature, opts);
+          var marker = new L.LabeledCircleMarker(latlng, feature, stale_marker_style);
         }
         else{
-          var marker = new L.LabeledCircleMarker(latlng, feature, options);
+          var marker = new L.LabeledCircleMarker(latlng, feature, marker_style);
         }
         var did = feature.properties.datastream_id;
         var popup = L.popup({ 'closeButton':false }).setContent('<div class="mappopup">'+
@@ -208,7 +253,8 @@ $(function() {
         });
         marker.on('mouseout', function (e) {
             this.closePopup();
-        });*/
+        });
+        */
         marker.on('click', function (e) {
             this.openPopup();
         });
@@ -232,7 +278,7 @@ Eg: only show 10 counts of datastream 14: <a href="https://zuidt.nl/frost/?d=14&
 <a href='javascript:window.location.href=setParameter("n",100);'>Top 100</a>
 <a href='javascript:window.location.href=setParameter("n",200);'>Top 200</a>
 -- Show <a href="?">ALL Datastreams</a></p>
-<p>Geojson  url = <a id="geojsonurl" href="">todo</a> </p>
+<p style="display:none;">Geojson  url = <a id="geojsonurl" href="">todo</a> </p>
 <p>Data url = <a id="dataurl" href="">todo</a> </p>
 </div>
 <div id="map"></div>
