@@ -29,7 +29,11 @@ path{
 
 
 .label {
-    position:absolute;
+    position: absolute;
+    font-weight: 700;
+    font-size: 120%;
+    background-color:white;
+    padding :2px;
 }
 
 circle {
@@ -290,9 +294,9 @@ function doit(datastream_id){
       .attr("d", averageLine(data.value))
       .on("mouseover", function(d,i) {
         var m = d3.mouse(this);  // mouseposition
-        console.log(this.id, m, datastream_id, data, d3.mean(data.value));
-        label.style("transform", "translate("+ m[0]+"px," + m[1]+"px)")
-        label.text("Datastream "+datastream_id);
+        var format = d3.format(".4n");
+        label.style("transform", "translate("+ m[0]+"px," + m[1]+"px)");
+        label.text("Datastream: "+datastream_id+' Mean: '+format(y.invert(m[1])));
       });
 
     if (datastreams.length==1){
