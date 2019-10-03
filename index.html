@@ -121,6 +121,12 @@ function createStaleMarkerOptions(options){
 $(function() {
 
   var datapageurl="data.html?";
+  var STA_HOST = window.location.protocol+'//'+window.location.hostname;
+  if ( (window.location.hostname).indexOf('zuidt')>=0){
+    // TEMP
+    STA_HOST+='/FROST-Server';
+  }
+
   var datastream = getParameterByName('d');
   if (!datastream){
     datastream = -1;
@@ -138,27 +144,22 @@ $(function() {
   document.getElementById('dataframe').src = datapageurl;
 
   // Get's all FeaturesOfInterest...  (which can be A LOT if you have (moving) gps devices)
-//  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
+  //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py?$count=true&$expand=observations($select=result,phenomenonTime;$expand=datastream;$orderby=phenomenonTime%20desc;$top=1)';
   // Better to get all Things (??or DataStreams) with their LATEST Observation) to start the map with
   // NOTE the 'Things' after the proxy... this triggers the sta_proxy to parse Things instead of FeaturesOfInterest
   var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
-  var featuresurl = window.location.protocol+'//'+window.location.hostname+'/FROST-Server/v1.0/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
+  var featuresurl = STA_HOST + '/v1.0/Things?$count=true&$select=name,description&$expand=Locations($select=name,location),Datastreams($expand=Observations($orderby=phenomenonTime desc;$top=1))';
   var start_zoom = 8;
   var zoom = start_zoom;
-  //Testing samenmeten...
-  //var featuresurl = "./samenmetenthings.json";
-  //var featuresurl = window.location.protocol+'//'+window.location.hostname+'/cgi-bin/sta_proxy.py/Things?$count=true&$expand=Locations($select=name,location)&$top=20';
   //console.log(featuresurl);
   if (datastream>0){
-    // Filter FOI's on Datastream id: $filter=observations/datastream/id eq 12&
-//    featuresurl = featuresurl + '&$filter=observations/datastream/id%20eq%20'+datastream;
     // Filter Things on Datastream id: $filter=observations/datastream/id eq 12&
     featuresurl = featuresurl + '&$filter=datastream/id%20eq%20'+datastream;
     //console.log(featuresurl);
     // only top=x when looking at 1 Datastream
     if (count>0){
       // SORT on observation time AND top count
-//      featuresurl = featuresurl + '&$orderby=observations/phenomenonTime %20desc&$top='+count;
+      //featuresurl = featuresurl + '&$orderby=observations/phenomenonTime %20desc&$top='+count;
       featuresurl = featuresurl.replace('$top=1', '$top='+count);
       //console.log(featuresurl);
     }
@@ -270,7 +271,7 @@ $(function() {
 <body>
 <div>
 <p>Use queryparams: <code>d=1</code> (d=datastream) to only show Datastream 1, or <code>n=10</code> to only show last 10 counts<br/>
-Eg: only show 10 counts of datastream 14: <a href="https://zuidt.nl/frost/?d=14&n=10">https://zuidt.nl/frost/?d=14&n=10</a></p>
+Eg: only show 10 counts of datastream 14: "https://SERVER?<b>d=14&n=10</b>"</p>
 <p>Show:
 <a href='javascript:window.location.href=setParameter("n",5);'>Top 5</a>
 <a href='javascript:window.location.href=setParameter("n",10);'>Top 10</a>

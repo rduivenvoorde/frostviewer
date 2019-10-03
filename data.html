@@ -127,11 +127,16 @@ var averageLine = d3.svg.line()
 
 // FROST-Server only on https
 var dataurl = '';
+var STA_HOST = window.location.protocol+'//'+window.location.hostname;
+if ( (window.location.hostname).indexOf('zuidt')>=0){
+  // TEMP
+  STA_HOST+='/FROST-Server';
+}
 var datastreams=[]
 var graph_height = 270;
 // only show when 1 datastream
 if (datastream.toString().split(',').length==1){
-  dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+  dataurl = STA_HOST + '/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
   document.getElementById('dataurl').setAttribute('href', dataurl);
   document.getElementById('dataurl').innerHTML = dataurl;
   datastreams.push(datastream);
@@ -197,10 +202,10 @@ function doit(datastream_id){
     // multidatastream? Filter on x hours ago instead of top=n
     //console.log(multistartdate);
     //console.log(multienddate);
-    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream_id+')/Observations?$count=true&$select=result,phenomenonTime&$orderby=phenomenonTime+desc&$top=1000&$filter=phenomenonTime gt '+multistartdate.toISOString();
+    dataurl = STA_HOST+'/v1.0/Datastreams('+datastream_id+')/Observations?$count=true&$select=result,phenomenonTime&$orderby=phenomenonTime+desc&$top=1000&$filter=phenomenonTime gt '+multistartdate.toISOString();
   }
   else{
-    dataurl = 'https://'+window.location.hostname+'/FROST-Server/v1.0/Datastreams('+datastream_id+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+    dataurl = STA_HOST+'/v1.0/Datastreams('+datastream_id+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
   }
 
   d3.json(dataurl, function(error, data) {
@@ -210,7 +215,7 @@ function doit(datastream_id){
       d.cpm = +d.result;
     });
 
-    console.log(datastream_id, data['@iot.count'], d3.extent(data.value, function(d) { return d.date; }));
+    //console.log(datastream_id, data['@iot.count'], d3.extent(data.value, function(d) { return d.date; }));
 
     // Scale the range of the data
     if (datastreams.length>1){
