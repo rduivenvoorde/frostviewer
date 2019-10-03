@@ -67,6 +67,20 @@ function getParameterByName(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
 }
 
+/*
+https://server/data.html?&
+d=301-350&   // datastreams: d=301 or d=301,302,302 or d=301-303
+ymin=20&     // ymin
+ymax=45&     // ymax
+h=8          // hours (uren in vergelijking)
+
+datastreams: d=301-303  == 301,302,303  (datastreams start t/m end)
+ymin: min-y
+ymax: max-y (to be able to see shoot outs)
+h: hours (number of hours in multidatastream graphic (defaults to 4))
+n: number of points (in single datastream graphic)
+*/
+
 var datastream = getParameterByName('d');
 if (!datastream){
   datastream = 1;
@@ -74,6 +88,10 @@ if (!datastream){
 var count = getParameterByName('n');
 if (!count){
   count = 100;
+}
+var hours = getParameterByName('h');
+if (!hours){
+  hours = 4;
 }
 
 
@@ -195,7 +213,7 @@ var svg = d3.select("body")
 
 var multienddate =  new Date(); // '2019-09-29T12:00:00.000Z';
 var multistartdate =  new Date(multienddate)  // '2019-09-29T09:00:00.000Z';
-multistartdate.setHours(multistartdate.getHours() - 4);  // hours
+multistartdate.setHours(multistartdate.getHours() - hours);  // hours
 //multistartdate.setDate(multistartdate.getDate() - 3);  // days
 
 for (var i=0;i<datastreams.length;i++){
