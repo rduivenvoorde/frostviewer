@@ -141,7 +141,6 @@ if(datastream.indexOf('-')>=0){
   for (var i=from;i<=to;i++){
     datastreams.push(i);
   }
-  console.log(datastreams);
 }
 else if(datastream.indexOf(',')>=0){
   datastreams = datastream.split(',');
@@ -159,7 +158,6 @@ var label_format = (d3.time.format("%H:%M"));
 
 // Set the dimensions of the canvas / graph
 var margin = {top: 30, right: 30, bottom: 30, left: 50},
-  //width = 600 - margin.left - margin.right,
   width = window.innerWidth - margin.left - margin.right - 50,
   height = graph_height - margin.top - margin.bottom - 20;
 
@@ -231,7 +229,15 @@ function doit(datastream_id){
     if (datastreams.length>1){
       // multi stream? Fixed value...
       x.domain([multistartdate, multienddate]);
-      y.domain([10, 35]);
+      var ymin = getParameterByName('ymin');
+      if (!ymin){
+        ymin = 10;
+      }
+      var ymax = getParameterByName('ymax');
+      if (!ymax){
+        ymax = 35;
+      }
+      y.domain([ymin, ymax]);
     }
     else{
       // actual extent from data
