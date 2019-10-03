@@ -43,7 +43,7 @@ circle {
 <body>
 
 <p> Data url = <a id="dataurl" href="">todo</a> </p>
-<p><a href="" class="showgraph">Open THIS Graph In Separate Window</a> OR <a href="" class="showdata">Show DATA In Separate Window</a></p>
+<p><a href="" class="showgraph">Open THIS GRAPH In Separate Window</a> OR <a href="" class="showdata">Show DATA In Separate Window</a></p>
 <p class="label">&nbsp;</p>
 
 <script  type="text/javascript">
@@ -132,18 +132,26 @@ if ( (window.location.hostname).indexOf('zuidt')>=0){
   // TEMP
   STA_HOST+='/FROST-Server';
 }
-var datastreams=[]
-var graph_height = 270;
-// only show when 1 datastream
-if (datastream.toString().split(',').length==1){
-  dataurl = STA_HOST + '/v1.0/Datastreams('+datastream+')/Observations?$count=true&$top='+count+'&$select=result,phenomenonTime&$orderby=phenomenonTime+desc';
+var datastreams=[];
+var graph_height = 800;
+if(datastream.indexOf('-')>=0){
+  var fromto = datastream.split('-');
+  var from = fromto[0];
+  var to = fromto[1];
+  for (var i=from;i<=to;i++){
+    datastreams.push(i);
+  }
+  console.log(datastreams);
+}
+else if(datastream.indexOf(',')>=0){
+  datastreams = datastream.split(',');
+}
+else{
+  // only show data url  when 1 datastream
   document.getElementById('dataurl').setAttribute('href', dataurl);
   document.getElementById('dataurl').innerHTML = dataurl;
   datastreams.push(datastream);
-}
-else{
-  datastreams = datastream.split(',');
-  graph_height = 800;
+  graph_height = 270;
 }
 
 var label = d3.select(".label");
@@ -209,7 +217,9 @@ function doit(datastream_id){
   }
 
   d3.json(dataurl, function(error, data) {
-
+    if (typeof data === 'undefined') {
+      return;
+    }
     data.value.forEach(function(d) {
       d.date = parseDate(d.phenomenonTime);
       d.cpm = +d.result;
